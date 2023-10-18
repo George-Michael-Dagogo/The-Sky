@@ -1,11 +1,8 @@
-import os
 from sqlalchemy import create_engine
 import pandas as pd
-from sqlalchemy.dialects import registry
-from sqlalchemy.orm import sessionmaker
-from snowflake.sqlalchemy import URL
+import snowflake.connector
 
-registry.register('snowflake', 'snowflake.sqlalchemy', 'dialect')
+
 
 path = "../The-Sky/Python/csv_files"
 
@@ -23,46 +20,48 @@ def extract_data_sources():
 
 
 def move_to_snowflake():
-    engine = create_engine(
-        'snowflake://{user}:{password}@{account}/'.format(
-            user='GEORGE',
-            password='George9042',
-            account='QTRNDAX.MY10065',
-            warehouse='COMPUTE_WH',
+        # Snowflake connection parameters
+    snowflake_account = "tl25793.eu-west-3.aws"
+    snowflake_user = "George"
+    snowflake_password = "George1234"
+    snowflake_database = "STAGING"
+    snowflake_schema = "AIR_STAGING"
+    snowflake_warehouse = "COMPUTE_WH"
 
-        )
+    # Snowflake connection
+    conn = snowflake.connector.connect(
+        user=snowflake_user,
+        password=snowflake_password,
+        account=snowflake_account,
+        warehouse=snowflake_warehouse,
+        database=snowflake_database,
+        schema=snowflake_schema
     )
-    try:
-        connection = engine.connect()
-        connection.execute('USE ROLE ACCOUNTADMIN')
-        connection.execute('USE DATABASE STAGING')
-        connection.execute('USE SCHEMA AIR_STAGING')
 
-        airports = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/airports.csv')
-        airports.to_sql('airports', con=connection, if_exists='replace',index = False,chunksize=16000)   
-
-        airport_frequencies = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/airport-frequencies.csv')
-        airport_frequencies.to_sql('airport_frequencies', con=connection, if_exists='replace',index = False,chunksize=16000) 
-
-        countries = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/countries.csv')
-        countries.to_sql('countries', con=connection, if_exists='replace',index = False,chunksize=16000)
-
-        airport_comments = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/airport-comments.csv')
-        airport_comments.to_sql('airport_comments', con=connection, if_exists='replace',index = False,chunksize=16000)
-
-        navaids = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/navaids.csv')
-        navaids.to_sql('navaids', con=connection, if_exists='replace',index = False,chunksize=16000)
-
-        regions = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/regions.csv')
-        regions.to_sql('regions', con=connection, if_exists='replace',index = False,chunksize=16000)
-
-        runways = pd.read_csv('/workspace/Airport_Pipeline/Airport_data/runways.csv')
-        runways.to_sql('runways', con=connection, if_exists='replace',index = False,chunksize=16000)
-
-        
-    finally:
-        connection.close()
-        engine.dispose()
+    engine = create_engine(f'snowflake://{snowflake_user}:{snowflake_password}@{snowflake_account}/{snowflake_database}/{snowflake_schema}')
     
+    airports = pd.read_csv('../The-Sky/Python/csv_files/airports.csv')
+    airports.to_sql('airports', engine, if_exists='replace', index=False, chunksize=16000)  
 
-move_to_snowflake()
+    airport_frequencies = pd.read_csv('../The-Sky/Python/csv_files/airport-frequencies.csv')
+    airport_frequencies.to_sql('airport_frequencies', engine, if_exists='replace',index = False,chunksize=16000) 
+
+    countries = pd.read_csv('../The-Sky/Python/csv_files/countries.csv')
+    countries.to_sql('countries', engine, if_exists='replace',index = False,chunksize=16000)
+
+    airport_comments = pd.read_csv('../The-Sky/Python/csv_files/airport-comments.csv')
+    airport_comments.to_sql('airport_comments', engine, if_exists='replace',index = False,chunksize=16000)
+
+    navaids = pd.read_csv('../The-Sky/Python/csv_files/navaids.csv')
+    navaids.to_sql('navaids', engine, if_exists='replace',index = False,chunksize=16000)
+
+    regions = pd.read_csv('../The-Sky/Python/csv_files/regions.csv')
+    regions.to_sql('regions', engine, if_exists='replace',index = False,chunksize=16000)
+
+    runways = pd.read_csv('../The-Sky/Python/csv_files/runways.csv')
+    runways.to_sql('runways', engine, if_exists='replace',index = False,chunksize=16000)
+
+    # Close the Snowflake connection
+    conn.close()
+
+
