@@ -49,9 +49,6 @@ def move_to_snowflake():
     countries = pd.read_csv('../The-Sky/Python/csv_files/countries.csv')
     countries.to_sql('countries', engine, if_exists='replace',index = False,chunksize=16000)
 
-    airport_comments = pd.read_csv('../The-Sky/Python/csv_files/airport-comments.csv')
-    airport_comments.to_sql('airport_comments', engine, if_exists='replace',index = False,chunksize=16000)
-
     navaids = pd.read_csv('../The-Sky/Python/csv_files/navaids.csv')
     navaids.to_sql('navaids', engine, if_exists='replace',index = False,chunksize=16000)
 
