@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 import pandas as pd
 import snowflake.connector
+import os
 
 
 
@@ -58,7 +59,10 @@ def move_to_snowflake():
     runways = pd.read_csv('../The-Sky/Python/csv_files/runways.csv')
     runways.to_sql('runways', engine, if_exists='replace',index = False,chunksize=16000)
 
+    print('successfully moved to snowflake staging air table')
     # Close the Snowflake connection
     conn.close()
 
 
+extract_data_sources()
+move_to_snowflake()
