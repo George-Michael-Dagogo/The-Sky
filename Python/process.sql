@@ -22,7 +22,7 @@ create or replace TABLE THE_SKY.SKY_DATA.REGIONS (
 
 create or replace TABLE THE_SKY.SKY_DATA.AIRPORTS (
 	AIRPORT_ID NUMBER(38,0) NOT NULL,
-	IDENT VARCHAR(30),
+	IDENT VARCHAR(30) UNIQUE,
 	TYPE VARCHAR(30),
 	NAME VARCHAR(225),
 	LATITUDE_DEG FLOAT,
@@ -77,10 +77,10 @@ create or replace TABLE THE_SKY.SKY_DATA.NAVAIDS (
 	MAGNETIC_VARIATION_DEG FLOAT,
 	USAGETYPE VARCHAR(30),
 	POWER VARCHAR(30),
-	ASSOCIATED_AIRPORT INTEGER,
+	ASSOCIATED_AIRPORT VARCHAR(30),
 	primary key (NAVAIDS_ID),
 	foreign key (ISO_COUNTRY) references THE_SKY.SKY_DATA.COUNTRIES(COUNTRY_CODE),
-    foreign key (ASSOCIATED_AIRPORT) references THE_SKY.SKY_DATA.AIRPORTS(AIRPORT_ID)
+    foreign key (ASSOCIATED_AIRPORT) references THE_SKY.SKY_DATA.AIRPORTS(IDENT)
 );
 
 
@@ -352,4 +352,81 @@ WHERE NOT EXISTS (
     SELECT 1
     FROM THE_SKY.SKY_DATA.RUNWAYS AS target
     WHERE source.ID = target.RUNWAYS_ID);
+
+
+--Business questions
+--How many airports, heliports, and airfields are on each continent?
+--How many airports, heliports, and airfields are in each country?
+--What is the maximum and minimum elevation of each airport type?
+--Which country has the highest number of airports(ignore types)?
+
+--Airports per country
+SELECT C.NAME AS CountryName,
+       A.ISO_COUNTRY,    
+       COUNT(CASE WHEN A.TYPE IN ('seaplane_base', 'medium_airport', 'large_airport') THEN 1 END) AS Airports,
+       COUNT(CASE WHEN A.TYPE = 'heliport' THEN 1 END) AS Heliport,
+       COUNT(CASE WHEN A.TYPE = 'small_airport' THEN 1 END) AS Airfield
+FROM THE_SKY.SKY_DATA.AIRPORTS A
+JOIN THE_SKY.SKY_DATA.COUNTRIES C ON A.ISO_COUNTRY = C.COUNTRY_CODE
+GROUP BY C.NAME, A.ISO_COUNTRY
+ORDER BY Airports DESC;
+
+
+
+SELECT type,
+       MAX(elevation_ft) AS highest_elevation,
+       MIN(elevation_ft) AS lowest_elevation
+FROM THE_SKY.SKY_DATA.AIRPORTS
+GROUP BY type;
+
+
+
+SELECT C.NAME AS CountryName, COUNT(A.ISO_COUNTRY) AS AirportCount
+FROM THE_SKY.SKY_DATA.AIRPORTS A
+JOIN THE_SKY.SKY_DATA.COUNTRIES C ON A.ISO_COUNTRY = C.COUNTRY_CODE
+GROUP BY C.NAME
+ORDER BY AirportCount DESC
+LIMIT 10;
+
+--views
+--Airports per continent
+CREATE OR REPLACE VIEW THE_SKY.SKY_DATA.airport_per_continent AS
+SELECT continent,    
+COUNT(CASE WHEN type IN ('seaplane_base','medium_airport', 'large_airport') THEN 1 END) AS airports,
+--on the assumption that 'seaplane_base','medium_airport' and 'large_airport' are all airports
+--and 'small_airport' is an airfield
+COUNT(CASE WHEN type = 'heliport' THEN 1 END) AS heliport,
+COUNT(CASE WHEN type = 'small_airport' THEN 1 END) AS airfield      
+FROM THE_SKY.SKY_DATA.AIRPORTS
+GROUP BY continent;
+
+
+--Airports per country
+CREATE OR REPLACE VIEW THE_SKY.SKY_DATA.airport_per_country AS
+SELECT C.NAME AS CountryName,
+       A.ISO_COUNTRY,    
+       COUNT(CASE WHEN A.TYPE IN ('seaplane_base', 'medium_airport', 'large_airport') THEN 1 END) AS Airports,
+       COUNT(CASE WHEN A.TYPE = 'heliport' THEN 1 END) AS Heliport,
+       COUNT(CASE WHEN A.TYPE = 'small_airport' THEN 1 END) AS Airfield
+FROM THE_SKY.SKY_DATA.AIRPORTS A
+JOIN THE_SKY.SKY_DATA.COUNTRIES C ON A.ISO_COUNTRY = C.COUNTRY_CODE
+GROUP BY C.NAME, A.ISO_COUNTRY
+ORDER BY Airports DESC;
+
+
+CREATE OR REPLACE VIEW THE_SKY.SKY_DATA.min_max_elevation_type AS
+SELECT type,
+       MAX(elevation_ft) AS highest_elevation,
+       MIN(elevation_ft) AS lowest_elevation
+FROM THE_SKY.SKY_DATA.AIRPORTS
+GROUP BY type;
+
+
+CREATE OR REPLACE VIEW THE_SKY.SKY_DATA.airport_count_country AS
+SELECT C.NAME AS CountryName, COUNT(A.ISO_COUNTRY) AS AirportCount
+FROM THE_SKY.SKY_DATA.AIRPORTS A
+JOIN THE_SKY.SKY_DATA.COUNTRIES C ON A.ISO_COUNTRY = C.COUNTRY_CODE
+GROUP BY C.NAME
+ORDER BY AirportCount DESC
+LIMIT 10;
 
